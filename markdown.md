@@ -108,16 +108,16 @@ Impact on Security: ASLR makes it more difficult for an attacker to predict the 
 </li>
 </ul>
 
+
 # Legacy options Analysis
 LEGCFLAGS
 <li>To include</li>
--fstack-protector-strong:
-
-Reason: Enhances stack protection against buffer overflows.
 -D_FORTIFY_SOURCE=2:
 
-Reason: Provides compile-time and run-time checks to prevent buffer overflows.
--fPIE or -fPIC:
+Reason: Enhances stack protection against buffer overflows.
+-D_FORTIFY_SOURCE=2. Provides compile-time and run-time checks to prevent buffer overflows.
+
+``-fPIE or -fPIC:``
 
 Reason: Necessary for Position-Independent Code, which is important for Address Space Layout Randomization (ASLR).
 
@@ -190,3 +190,48 @@ printf("You entered %s and %s. \nDo you agree ? (Y,n):\n", argv[1], argv[2]);
 Problem: There is no validation to ensure that argv[1] and argv[2] are not NULL before using them in printf, which could lead to a segmentation fault if argv[1] or argv[2] are NULL.
 Solution: Add checks to ensure argv[1] and argv[2] are not NULL
 </p>
+
+<h4>Unused program </h4>
+<code>
+int fnR(void) {
+    puts("Opened.");
+    puts("Be careful, you are ROOT !\n");
+    return 0;
+}
+</code>
+<p>
+Problem: The above function gives root access to the user as it says and is not being used anywhere in the code. This can be reversed engineer and tried to call to gain root access of the program
+Solution: The best way is to delete this part of code.
+</p>
+
+
+# Patch file summary
+In the patch file I have changed the following in ``main.c``
+
+- Replaced the ``atoi`` function with ``strol``
+Function strtol: Converts a string to a long int. It requires the string to be converted, a char pointer (which points to the first non-integer character after the number in the string), and the base for conversion (10 for decimal).
+Endptr is used to determine whether the entire string was a valid integer. If *endptr is not '0,' this indicates that the string contains non-numeric characters.
+Casting: The returned long value is converted to an int. Be wary of potential overflows and underflows.
+Error Handling: The code now contains error messages and exits if the input is not an integer.
+
+This fix ensures that the inputs are valid integers and deals with the cases where they are not.
+![atoitostrol](image.png)
+
+- Fixed the Buffer Overflow issue in ``functions.c`` file
+The validate function is modified and now handles issues like buffer overflow by changing the buffer size to 21 from 20 considering the null character. Checking the arguments at early stage for null arguments. The ``scanf`` is changed to ``fgets`` which is safer as it limits the size readability of buffer based on the input. Error handling if the ``fgets`` function fails i.e. returns NULL and error message is printed to ``stderr`` returning 1 which indicates an error.
+
+This fix ensures that there is no bufferoverflow vulnerability in the code that can be exploited by the attacker.
+![validate](image-1.png)
+
+- Deleted the ``fnR`` function to not give any third party a chance to get root access of the program and potentially misuse the unethically gained priviledges.
+
+![Alt text](image-2.png)
+
+- Markdown File:-Added the necessary``LEGCFLAGS`` and ``LEGDFLAGS`` :
+``LEGCFLAGS  = -D_FORTIFY_SOURCE=2 -fPIE``
+``LEGLDFLAGS = -Wl -z --as-needed``
+
+#Conclusion
+In summary, the review and enhancement of the door-locker project have been successfully completed. Key vulnerabilities within the code, particularly related to buffer overflows and input validation, have been identified and effectively remediated. The implementation of updated legacy compiler and linker flags has significantly bolstered the security posture of the application while maintaining compatibility with legacy systems.
+The patches applied not only address the immediate security concerns, but also lay the groundwork for future more secure and maintainable code. This proactive approach to software security is consistent with our commitment to providing solid and dependable home automation solutions.
+I am confident that these enhancements will contribute to the overall resilience and performance of our product, aligning with our organizational standards for quality and security. I am available to discuss any further details or to proceed with additional improvements as deemed necessary.
